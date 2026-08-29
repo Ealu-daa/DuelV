@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 37507611c6e33b944a0f0a97cf47d537, type: 3}
+  m_Name: Kantuu
+  m_EditorClassIdentifier: 
+  id: 1005
+  catalystName: "\u8CAB\u901A"
+  description: "\u3053\u306E\u30BF\u30FC\u30F3\u6575\u3092\u5012\u3057\u305F\u6642\u3001\u8D85\u904E\u30C0\u30E1\u30FC\u30B8\u3092\u3082\u3046\u4E00\u65B9\u306EFW\u3078\u4E0E\u3048\u308B"
+  restrictedRole: 1
+  icon: {fileID: 7599642553298196699, guid: 4c0c80615b00279458b27ce6dc3b1b34, type: 3}

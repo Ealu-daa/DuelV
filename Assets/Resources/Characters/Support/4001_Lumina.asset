@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31e9766369d42db4bbe9ffdef9c57fa2, type: 3}
+  m_Name: 4001_Lumina
+  m_EditorClassIdentifier: 
+  characterName: "\u30EB\u30DF\u30CA"
+  id: 4001
+  origin: "\u30D5\u30A1\u30A6\u30CA\u5E1D\u56FD"
+  price: 0
+  description: "\u30D5\u30A1\u30A6\u30CA\u51FA\u8EAB\u306E\u751F\u7269\u5B66\u8005\u3002\u91CE\u5FC3\u3068\u597D\u5947\u5FC3\u306B\u6EA2\u308C\u3001\u751F\u7269\u306B\u3064\u3044\u3066\u7814\u7A76\u3059\u308B\u4E2D\u3067\u751F\u547D\u306E\u5C0A\u3055\u3092\u7406\u89E3\u3057\u3066\u3044\u308B\u3002\u5149\u306E\u529B\u306B\u3088\u308B\u6CBB\u7652\u80FD\u529B\u3067\u50B7\u3064\u3044\u305F\u4EF2\u9593\u3092\u7652\u3057\u3001\u6226\u5834\u306B\u5E0C\u671B\u3092\u7E4B\u304E\u7D9A\u3051\u308B\u3002"
+  maxHP: 22
+  attack: 3
+  defense: 3
+  maxUltGauge: 6
+  skillName: "\u30E9\u30A4\u30C8\u30D2\u30FC\u30EB"
+  skillDescription: "\u5473\u65B9FW1\u4F53\u30925HP\u56DE\u5FA9\u3002"
+  ultName: "\u30B5\u30F3\u30AF\u30C1\u30E5\u30A2\u30EA"
+  ultDescription: "\u5473\u65B9\u5168\u4F53\u30928HP\u56DE\u5FA9\u3002\r\n\u5473\u65B9\u5168\u4F53\u306E\u30C7\u30D0\u30D5\u3092\u89E3\u9664\u3002"
+  characterSprite: {fileID: -3607586926129523875, guid: 6b050f37283ebb34eac16d1a45316c06, type: 3}
+  characterIconSprite: {fileID: 2304487265769953174, guid: 218d23e047fc4da46937b5fb876fcb9c, type: 3}
+  suspendedAnimationSprite: {fileID: 0}
+  revivedSprite: {fileID: 0}
+  attackAnimatorController: {fileID: 7195734305449628063, guid: 15a89fa82f0a49244ab688daa6be5525, type: 3}
+  attackAnimationClip: {fileID: 2998223551772465189, guid: 15a89fa82f0a49244ab688daa6be5525, type: 3}
+  skillAnimatorController: {fileID: 0}
+  skillAnimationClip: {fileID: 0}
+  skillSprite: {fileID: -4114889158304955623, guid: 3b0e2a06b58af854397dfce50f67bb33, type: 3}
+  ultAnimatorController: {fileID: 0}
+  ultAnimationClip: {fileID: 0}
+  ultSprite: {fileID: 6711569710321926169, guid: cfa2a725aa2ba234199f7388d299746a, type: 3}
+  attackSe: {fileID: 8300000, guid: 90cf4657c071e2c49bbd77b406da5236, type: 3}
+  skillSe: {fileID: 8300000, guid: 52c7951efa06b774295a8ce5dd6d0161, type: 3}
+  ultSe: {fileID: 8300000, guid: 908aed7c517f2ee47a2614429c0c5311, type: 3}

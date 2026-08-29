@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 31e9766369d42db4bbe9ffdef9c57fa2, type: 3}
+  m_Name: 3003_Chain
+  m_EditorClassIdentifier: 
+  characterName: "\u30C1\u30A7\u30A4\u30F3"
+  id: 3003
+  origin: "\u30D5\u30A1\u30B8\u30E5\u30FC\u30EB\u738B\u56FD"
+  price: 0
+  description: "\u30D5\u30A1\u30B8\u30E5\u30FC\u30EB\u738B\u56FD\u306E\u8853\u5E2B\u3002\u51B7\u9759\u3067\u76AE\u8089\u5C4B\u306A\u6027\u683C\u3092\u3057\u3066\u304A\u308A\u3001\u4F59\u88D5\u306E\u3042\u308B\u614B\u5EA6\u3067\u76F8\u624B\u3092\u7FFB\u5F04\u3059\u308B\u3002\u546A\u8853\u306B\u3088\u3063\u3066\u6575\u540C\u58EB\u3092\u7E4B\u304E\u3001\u529B\u3092\u524A\u304E\u306A\u304C\u3089\u4E92\u3044\u306E\u53D7\u3051\u305F\u82E6\u75DB\u3092\u5171\u6709\u3055\u305B\u308B\u3002"
+  maxHP: 20
+  attack: 4
+  defense: 3
+  maxUltGauge: 7
+  skillName: "\u30A6\u30A3\u30B6\u30FC\u30DE\u30FC\u30AD\u30F3\u30B0"
+  skillDescription: "\u76F8\u624BFW1\u4F53\u306B2\u30C0\u30E1\u30FC\u30B8\u3092\u4E0E\u3048\u3001\u8870\u5F31\u30B9\u30BF\u30C3\u30AF\u30921\u3064\u4ED8\u4E0E(\u91CD\u8907\u53EF\u80FD\u3001\u4E0A\u96505)\u3002\u30B9\u30BF\u30C3\u30AF1\u3064\u306B\u3064\u304D\u653B\u6483\u529B-1(\u6700\u5C0F\u50240)
+    \u30C1\u30A7\u30A4\u30F3\u304C\u6B7B\u306C\u3068\u30EA\u30BB\u30C3\u30C8\u3055\u308C\u308B"
+  ultName: "\u30B7\u30F3\u30AF\u30B6\u30DA\u30A4\u30F3"
+  ultDescription: "2\u30BF\u30FC\u30F3\u3001\u6575FW1\u4F53\u304C\u53D7\u3051\u305F\u30C0\u30E1\u30FC\u30B8\u306E\u534A\u5206(\u5207\u308A\u6368\u3066)\u304C\u3082\u3046\u4E00\u65B9\u306E\u6575FW\u306B\u3082\u5165\u308B"
+  characterSprite: {fileID: 9063914425172658575, guid: 81198944febe2ad47816b52f354afeff, type: 3}
+  characterIconSprite: {fileID: 483254051421485181, guid: 6d91ad3a198d4a949bd38cca9b913789, type: 3}
+  suspendedAnimationSprite: {fileID: 0}
+  revivedSprite: {fileID: 0}
+  attackAnimatorController: {fileID: 7195734305449628063, guid: 15a89fa82f0a49244ab688daa6be5525, type: 3}
+  attackAnimationClip: {fileID: 2998223551772465189, guid: 15a89fa82f0a49244ab688daa6be5525, type: 3}
+  skillAnimatorController: {fileID: 0}
+  skillAnimationClip: {fileID: 0}
+  skillSprite: {fileID: 2403128826984349432, guid: 85163f4ca8632c84c95e0fa4d1f78df6, type: 3}
+  ultAnimatorController: {fileID: 0}
+  ultAnimationClip: {fileID: 0}
+  ultSprite: {fileID: 3853671495144978190, guid: d01901878d07b2d49b575d3c6cf65e89, type: 3}
+  attackSe: {fileID: 8300000, guid: 90cf4657c071e2c49bbd77b406da5236, type: 3}
+  skillSe: {fileID: 8300000, guid: 659e0f979088bdd4d9d66fed1ac8bd90, type: 3}
+  ultSe: {fileID: 8300000, guid: c0853847fa3915e4ab743705e8dd1672, type: 3}
