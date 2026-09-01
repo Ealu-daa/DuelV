@@ -32,12 +32,32 @@
       height: 100%;
       display: block;
     }
+    #fullscreen-button {
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+      font-size: 20px;
+      line-height: 40px;
+      text-align: center;
+      padding: 0;
+      z-index: 100;
+      cursor: pointer;
+      /* スマホでタップ時にハイライト色が付くのを防ぐ */
+      -webkit-tap-highlight-color: transparent;
+    }
   </style>
 </head>
 <body>
   <div id="unity-container">
     <canvas id="unity-canvas"></canvas>
   </div>
+  <button id="fullscreen-button" type="button" aria-label="フルスクリーン切り替え">⛶</button>
   <script src="Build/b.1.loader.js"></script>
   <script>
     var canvas = document.querySelector("#unity-canvas");
@@ -50,6 +70,51 @@
     }
     resizeCanvas();
     window.addEventListener("resize", resizeCanvas);
+
+    // フルスクリーン切り替え(ブラウザの仕様上、ユーザー操作がないと呼び出せないためボタン経由にしている)。
+    // ベンダープレフィックス付きAPI(Safari等)にも対応
+    var fullscreenTarget = document.getElementById("unity-container");
+    var fullscreenButton = document.getElementById("fullscreen-button");
+
+    function isFullscreen() {
+      return !!(document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement);
+    }
+
+    function requestFullscreen(el) {
+      if (el.requestFullscreen) return el.requestFullscreen();
+      if (el.webkitRequestFullscreen) return el.webkitRequestFullscreen(); // Safari
+      if (el.msRequestFullscreen) return el.msRequestFullscreen();         // 旧Edge/IE
+    }
+
+    function exitFullscreen() {
+      if (document.exitFullscreen) return document.exitFullscreen();
+      if (document.webkitExitFullscreen) return document.webkitExitFullscreen();
+      if (document.msExitFullscreen) return document.msExitFullscreen();
+    }
+
+    if (fullscreenButton) {
+      // iOS Safari(特に旧バージョン)はFullscreen API自体に対応していない場合があるため、
+      // 非対応環境ではボタンごと隠す
+      var supportsFullscreen = !!(fullscreenTarget.requestFullscreen || fullscreenTarget.webkitRequestFullscreen || fullscreenTarget.msRequestFullscreen);
+      if (!supportsFullscreen) {
+        fullscreenButton.style.display = "none";
+      } else {
+        fullscreenButton.addEventListener("click", function () {
+          if (isFullscreen()) {
+            exitFullscreen();
+          } else {
+            requestFullscreen(fullscreenTarget);
+          }
+        });
+
+        var updateButtonLabel = function () {
+          fullscreenButton.textContent = isFullscreen() ? "⤢" : "⛶";
+        };
+        document.addEventListener("fullscreenchange", updateButtonLabel);
+        document.addEventListener("webkitfullscreenchange", updateButtonLabel);
+        document.addEventListener("msfullscreenchange", updateButtonLabel);
+      }
+    }
 
     var buildUrl = "Build";
     var config = {
