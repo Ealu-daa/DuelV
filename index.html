@@ -5,7 +5,7 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>DuelV</title>
-  <link rel="shortcut icon" href="TemplateData/favicon.ico">
+  <link rel="icon" type="image/png" href="TemplateData/favicon.png">
 
   <!-- Firebase SDK (compat版。jslib内のfirebase.xxx記法がそのまま使える) -->
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
@@ -20,9 +20,27 @@
       overflow: hidden;
       background: #000;
     }
+    /* スマホを縦持ちした時に、ゲーム部分だけを90度回転させて強制的に横向き表示にする(OSの回転ロックが
+       かかっていても効く)。bodyには絶対にtransformをかけない: Google Identity Services等がdocument.body
+       直下にposition:fixedでUIを差し込んでくることがあり、body自体を回転させるとそのUIまで巻き込んで
+       回転・位置ズレしてしまう(実際にGoogle連携のプロンプトが操作不能になる不具合が起きた)。
+       そのため回転は専用ラッパー(#app-root)だけに閉じ込める */
+    #app-root {
+      width: 100%;
+      height: 100%;
+    }
+    #app-root.force-landscape {
+      position: fixed;
+      top: 0;
+      left: 100%;
+      width: 100vh;
+      height: 100vw;
+      transform-origin: 0 0;
+      transform: rotate(90deg);
+    }
     #unity-container {
-      width: 100vw;
-      height: 100vh;
+      width: 100%;
+      height: 100%;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -54,22 +72,63 @@
   </style>
 </head>
 <body>
-  <div id="unity-container">
-    <canvas id="unity-canvas"></canvas>
+  <div id="app-root">
+    <div id="unity-container">
+      <canvas id="unity-canvas"></canvas>
+    </div>
+    <button id="fullscreen-button" type="button" aria-label="フルスクリーン切り替え">⛶</button>
   </div>
-  <button id="fullscreen-button" type="button" aria-label="フルスクリーン切り替え">⛶</button>
-  <script src="Build/b.1.loader.js"></script>
+  <script src="Build/a.1.loader.js"></script>
   <script>
     var canvas = document.querySelector("#unity-canvas");
 
-    // 実解像度をウィンドウサイズに追従させる(見た目だけCSSで伸ばすとぼやけるため)
+    // 常に16:9を維持し、ウィンドウ/画面がその比率でない場合は収まる最大サイズでレターボックス(上下 or 左右に黒帯)する。
+    // #unity-containerがflexで中央揃えなので、キャンバスのCSSサイズをこの矩形に固定するだけで自動的に中央に収まる
+    var TARGET_ASPECT = 16 / 9;
+
+    function isTouchDevice() {
+      return ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
+    }
+
+    var appRoot = document.getElementById("app-root");
+
+    // スマホ(タッチデバイス)を縦持ちしている間だけ、#app-rootに.force-landscapeを付けてCSSで90度回転させる
+    // (bodyそのものは回転させない。理由は#app-root.force-landscapeのコメント参照)。
+    // OSの画面回転ロックがかかっていても効く(ネイティブのScreen Orientation APIに頼らないため)
+    function updateForceLandscape() {
+      var shouldRotate = isTouchDevice() && window.innerHeight > window.innerWidth;
+      appRoot.classList.toggle("force-landscape", shouldRotate);
+    }
+
     function resizeCanvas() {
       var dpr = window.devicePixelRatio || 1;
-      canvas.width = window.innerWidth * dpr;
-      canvas.height = window.innerHeight * dpr;
+      // 回転中は#app-root自体がwidth/heightを入れ替えているので、実際に使える見た目の横/縦もそれに合わせて入れ替える
+      var rotated = appRoot.classList.contains("force-landscape");
+      var winW = rotated ? window.innerHeight : window.innerWidth;
+      var winH = rotated ? window.innerWidth : window.innerHeight;
+
+      var w = winW;
+      var h = w / TARGET_ASPECT;
+      if (h > winH) {
+        h = winH;
+        w = h * TARGET_ASPECT;
+      }
+
+      // 実解像度(canvas.width/height)とCSS表示サイズ(canvas.style)を両方この矩形に合わせる
+      // (表示サイズだけCSSで伸ばすとぼやけるため、実解像度側もdpr込みで明示的に指定する)
+      canvas.style.width = w + "px";
+      canvas.style.height = h + "px";
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
     }
-    resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
+
+    function handleViewportChange() {
+      updateForceLandscape();
+      resizeCanvas();
+    }
+    handleViewportChange();
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("orientationchange", handleViewportChange);
 
     // フルスクリーン切り替え(ブラウザの仕様上、ユーザー操作がないと呼び出せないためボタン経由にしている)。
     // ベンダープレフィックス付きAPI(Safari等)にも対応
@@ -103,7 +162,16 @@
           if (isFullscreen()) {
             exitFullscreen();
           } else {
-            requestFullscreen(fullscreenTarget);
+            var result = requestFullscreen(fullscreenTarget);
+            // 対応環境(主にAndroid Chrome)ではフルスクリーン化と同時にOS側の回転ロックも試みる。
+            // 失敗/非対応でも.force-landscapeによるCSS回転が効くので無視してよい
+            if (result && result.then) {
+              result.then(function () {
+                if (screen.orientation && screen.orientation.lock) {
+                  screen.orientation.lock("landscape").catch(function () {});
+                }
+              });
+            }
           }
         });
 
@@ -118,13 +186,13 @@
 
     var buildUrl = "Build";
     var config = {
-      dataUrl: buildUrl + "/b.1.data",
-      frameworkUrl: buildUrl + "/b.1.framework.js",
-      codeUrl: buildUrl + "/b.1.wasm",
+      dataUrl: buildUrl + "/a.1.data.unityweb",
+      frameworkUrl: buildUrl + "/a.1.framework.js.unityweb",
+      codeUrl: buildUrl + "/a.1.wasm.unityweb",
       streamingAssetsUrl: "StreamingAssets",
       companyName: "DefaultCompany",
       productName: "DuelV",
-      productVersion: "b.1",
+      productVersion: "a.1",
     };
 
     createUnityInstance(canvas, config).then((unityInstance) => {
