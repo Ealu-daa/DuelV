@@ -121,10 +121,14 @@
         w = h * TARGET_ASPECT;
       }
 
-      // ウィンドウモード限定の画面サイズ調整(50~150%、ピボットは中心)。フルスクリーン中は常に100%扱いにする
-      // (フルスクリーンは画面いっぱいに表示する機能なので、この設定と組み合わせる意味がないため)。
-      // transform:scale()による見た目だけの拡大ではなく、ここでキャンバス自体の実サイズを増減させている
-      var scale = isFullscreen() ? 1 : gameWindowScalePercent / 100;
+      // ウィンドウモード限定の画面サイズ調整(50~150%、ピボットは中心)。フルスクリーン中、および
+      // スマホの強制横向き(rotated)中は常に100%扱いにする。
+      // フルスクリーンは画面いっぱいに表示する機能なので、この設定と組み合わせる意味がないため。
+      // 強制横向き中は、下のoverflow/padding計算がCSSの見た目の(rotateで90度回転した)座標系ではなく
+      // rotate前の論理的な横/縦(winW/winH)を基準にしているため、そのまま適用すると縦横が食い違って
+      // 想定外の範囲が見えたりレイアウトが崩れたりする不具合になる。スマホでは元々この設定は意味を
+      // 持たない(「ウィンドウモード」はPCブラウザの概念なので)ため、素直に無効化しておく
+      var scale = (isFullscreen() || rotated) ? 1 : gameWindowScalePercent / 100;
       var scaledW = w * scale;
       var scaledH = h * scale;
 
@@ -250,6 +254,10 @@
     window.__duelvSetGameWindowScalePercent = function (percent) {
       gameWindowScalePercent = percent;
       handleViewportChange();
+      // Unity側もcanvasのクリック/タップ座標をブラウザのresizeイベントを起点に内部キャッシュしている
+      // ことがあるため、こちらから直接canvasサイズを変えた後は念のため合成のresizeイベントを投げて
+      // Unity側にも再計算のきっかけを与えておく(ボタンの見た目と実際の当たり判定がズレる事故の予防)
+      window.dispatchEvent(new Event("resize"));
     };
 
     var buildUrl = "Build";
