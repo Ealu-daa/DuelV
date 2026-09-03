@@ -35,6 +35,11 @@
       left: 100%;
       width: 100vh;
       height: 100vw;
+      /* LINE等のアプリ内ブラウザは自前のツールバー分だけ古いvh/vwの基準がずれることがあるため、
+         対応ブラウザでは「実際に見えている領域」に追従するdvh/dvwを優先する(非対応ブラウザは
+         このプロパティ自体を無視するので、上のvh/vwがそのままフォールバックとして効く) */
+      width: 100dvh;
+      height: 100dvw;
       transform-origin: 0 0;
       transform: rotate(90deg);
     }
@@ -105,6 +110,18 @@
       return ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
     }
 
+    // LINEやX、Instagram等のアプリ内ブラウザ(独自のWebView)は、自前のツールバー/UI分だけ
+    // window.innerWidth/innerHeightが実際に見えている領域と食い違うことがよくある(ツールバーの
+    // 表示/非表示でも正しく更新されないことがある)。window.visualViewportは「実際に見えている
+    // 領域」を返すことを目的としたAPIで、こうしたアプリ内ブラウザでもより正確な値が取れることが多いため、
+    // 使える場合はそちらを優先する
+    function getViewportSize() {
+      if (window.visualViewport) {
+        return { width: window.visualViewport.width, height: window.visualViewport.height };
+      }
+      return { width: window.innerWidth, height: window.innerHeight };
+    }
+
     var appRoot = document.getElementById("app-root");
     var rotateButton = document.getElementById("rotate-button");
 
@@ -118,7 +135,8 @@
     // (bodyそのものは回転させない。理由は#app-root.force-landscapeのコメント参照)。
     // OSの画面回転ロックがかかっていても効く(ネイティブのScreen Orientation APIに頼らないため)
     function updateForceLandscape() {
-      var autoShouldRotate = isTouchDevice() && window.innerHeight > window.innerWidth;
+      var vp = getViewportSize();
+      var autoShouldRotate = isTouchDevice() && vp.height > vp.width;
       var shouldRotate = manualRotationOverride !== null ? manualRotationOverride : autoShouldRotate;
       appRoot.classList.toggle("force-landscape", shouldRotate);
       if (rotateButton) rotateButton.classList.toggle("active", shouldRotate);
@@ -133,10 +151,11 @@
 
     function resizeCanvas() {
       var dpr = window.devicePixelRatio || 1;
+      var vp = getViewportSize();
       // 回転中は#app-root自体がwidth/heightを入れ替えているので、実際に使える見た目の横/縦もそれに合わせて入れ替える
       var rotated = appRoot.classList.contains("force-landscape");
-      var winW = rotated ? window.innerHeight : window.innerWidth;
-      var winH = rotated ? window.innerWidth : window.innerHeight;
+      var winW = rotated ? vp.height : vp.width;
+      var winH = rotated ? vp.width : vp.height;
 
       var w = winW;
       var h = w / TARGET_ASPECT;
