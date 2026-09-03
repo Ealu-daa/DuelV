@@ -20,28 +20,9 @@
       overflow: hidden;
       background: #000;
     }
-    /* スマホを縦持ちした時に、ゲーム部分だけを90度回転させて強制的に横向き表示にする(OSの回転ロックが
-       かかっていても効く)。bodyには絶対にtransformをかけない: Google Identity Services等がdocument.body
-       直下にposition:fixedでUIを差し込んでくることがあり、body自体を回転させるとそのUIまで巻き込んで
-       回転・位置ズレしてしまう(実際にGoogle連携のプロンプトが操作不能になる不具合が起きた)。
-       そのため回転は専用ラッパー(#app-root)だけに閉じ込める */
     #app-root {
       width: 100%;
       height: 100%;
-    }
-    #app-root.force-landscape {
-      position: fixed;
-      top: 0;
-      left: 100%;
-      width: 100vh;
-      height: 100vw;
-      /* LINE等のアプリ内ブラウザは自前のツールバー分だけ古いvh/vwの基準がずれることがあるため、
-         対応ブラウザでは「実際に見えている領域」に追従するdvh/dvwを優先する(非対応ブラウザは
-         このプロパティ自体を無視するので、上のvh/vwがそのままフォールバックとして効く) */
-      width: 100dvh;
-      height: 100dvw;
-      transform-origin: 0 0;
-      transform: rotate(90deg);
     }
     #unity-container {
       width: 100%;
@@ -55,9 +36,9 @@
       height: 100%;
       display: block;
     }
-    #fullscreen-button,
-    #rotate-button {
+    #fullscreen-button {
       position: fixed;
+      right: 12px;
       bottom: 12px;
       width: 40px;
       height: 40px;
@@ -74,13 +55,6 @@
       /* スマホでタップ時にハイライト色が付くのを防ぐ */
       -webkit-tap-highlight-color: transparent;
     }
-    #fullscreen-button { right: 12px; }
-    #rotate-button { right: 60px; }
-    /* 手動で回転をONにしている間、押しっぱなし感を出す */
-    #rotate-button.active {
-      background: rgba(255, 255, 255, 0.85);
-      color: #000;
-    }
   </style>
 </head>
 <body>
@@ -89,7 +63,6 @@
       <canvas id="unity-canvas"></canvas>
     </div>
     <button id="fullscreen-button" type="button" aria-label="フルスクリーン切り替え">⛶</button>
-    <button id="rotate-button" type="button" aria-label="回転切り替え">↻</button>
   </div>
   <script src="Build/a.1.loader.js"></script>
   <script>
@@ -106,10 +79,6 @@
     // #unity-containerがflexで中央揃えなので、キャンバスのCSSサイズをこの矩形に固定するだけで自動的に中央に収まる
     var TARGET_ASPECT = 16 / 9;
 
-    function isTouchDevice() {
-      return ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
-    }
-
     // LINEやX、Instagram等のアプリ内ブラウザ(独自のWebView)は、自前のツールバー/UI分だけ
     // window.innerWidth/innerHeightが実際に見えている領域と食い違うことがよくある(ツールバーの
     // 表示/非表示でも正しく更新されないことがある)。window.visualViewportは「実際に見えている
@@ -122,40 +91,11 @@
       return { width: window.innerWidth, height: window.innerHeight };
     }
 
-    var appRoot = document.getElementById("app-root");
-    var rotateButton = document.getElementById("rotate-button");
-
-    // 回転ボタンで手動固定した状態(null=自動判定に従う、true/false=ユーザーが手動でON/OFF固定した)。
-    // 自動判定(isTouchDevice() && 縦長)だけだと、判定に引っかからない環境(例: タッチ対応と判定されない
-    // デスクトップ)で回転を試したい場合や、逆に自動でONになった回転を一時的に解除したい場合に対応できない
-    // ため、フルスクリーンボタンと同様に手動トグルできるボタンを用意している
-    var manualRotationOverride = null;
-
-    // スマホ(タッチデバイス)を縦持ちしている間だけ、#app-rootに.force-landscapeを付けてCSSで90度回転させる
-    // (bodyそのものは回転させない。理由は#app-root.force-landscapeのコメント参照)。
-    // OSの画面回転ロックがかかっていても効く(ネイティブのScreen Orientation APIに頼らないため)
-    function updateForceLandscape() {
-      var vp = getViewportSize();
-      var autoShouldRotate = isTouchDevice() && vp.height > vp.width;
-      var shouldRotate = manualRotationOverride !== null ? manualRotationOverride : autoShouldRotate;
-      appRoot.classList.toggle("force-landscape", shouldRotate);
-      if (rotateButton) rotateButton.classList.toggle("active", shouldRotate);
-    }
-
-    if (rotateButton) {
-      rotateButton.addEventListener("click", function () {
-        manualRotationOverride = !appRoot.classList.contains("force-landscape");
-        handleViewportChange();
-      });
-    }
-
     function resizeCanvas() {
       var dpr = window.devicePixelRatio || 1;
       var vp = getViewportSize();
-      // 回転中は#app-root自体がwidth/heightを入れ替えているので、実際に使える見た目の横/縦もそれに合わせて入れ替える
-      var rotated = appRoot.classList.contains("force-landscape");
-      var winW = rotated ? vp.height : vp.width;
-      var winH = rotated ? vp.width : vp.height;
+      var winW = vp.width;
+      var winH = vp.height;
 
       var w = winW;
       var h = w / TARGET_ASPECT;
@@ -164,14 +104,10 @@
         w = h * TARGET_ASPECT;
       }
 
-      // ウィンドウモード限定の画面サイズ調整(50~150%、ピボットは中心)。フルスクリーン中、および
-      // スマホの強制横向き(rotated)中は常に100%扱いにする。
-      // フルスクリーンは画面いっぱいに表示する機能なので、この設定と組み合わせる意味がないため。
-      // 強制横向き中は、下のoverflow/padding計算がCSSの見た目の(rotateで90度回転した)座標系ではなく
-      // rotate前の論理的な横/縦(winW/winH)を基準にしているため、そのまま適用すると縦横が食い違って
-      // 想定外の範囲が見えたりレイアウトが崩れたりする不具合になる。スマホでは元々この設定は意味を
-      // 持たない(「ウィンドウモード」はPCブラウザの概念なので)ため、素直に無効化しておく
-      var scale = (isFullscreen() || rotated) ? 1 : gameWindowScalePercent / 100;
+      // ウィンドウモード限定の画面サイズ調整(50~150%、ピボットは中心)。フルスクリーン中は常に100%扱いにする
+      // (フルスクリーンは画面いっぱいに表示する機能なので、この設定と組み合わせる意味がないため)。
+      // transform:scale()による見た目だけの拡大ではなく、ここでキャンバス自体の実サイズを増減させている
+      var scale = isFullscreen() ? 1 : gameWindowScalePercent / 100;
       var scaledW = w * scale;
       var scaledH = h * scale;
 
@@ -209,30 +145,24 @@
       }
     }
 
-    function handleViewportChange() {
-      updateForceLandscape();
-      resizeCanvas();
-    }
-    handleViewportChange();
-    window.addEventListener("resize", handleViewportChange);
-    window.addEventListener("orientationchange", handleViewportChange);
     // モバイルブラウザはアドレスバーの表示/非表示などでビューポートの確定が初回描画に間に合わないことがあり、
-    // その場合resize/orientationchangeが発火しないまま「縦横判定はforce-landscapeなのに、実解像度の計算だけ
-    // 古い(縦の)ウィンドウサイズを元にしたまま」になってしまう不具合が実際にあった(CSSの回転自体は効いて
-    // いるのに、中身の描画だけ潰れて縦のまま見える)。次の数フレーム/数百ms以内に再計算して自己修復させておく
+    // その場合resize/orientationchangeが発火しないまま古いウィンドウサイズを元にした計算のままになって
+    // しまう不具合が実際にあった。次の数フレーム/数百ms以内に再計算して自己修復させておく
+    resizeCanvas();
+    window.addEventListener("resize", resizeCanvas);
+    window.addEventListener("orientationchange", resizeCanvas);
     requestAnimationFrame(function () {
-      requestAnimationFrame(handleViewportChange);
+      requestAnimationFrame(resizeCanvas);
     });
-    setTimeout(handleViewportChange, 300);
-    if (window.visualViewport) window.visualViewport.addEventListener("resize", handleViewportChange);
+    setTimeout(resizeCanvas, 300);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
 
     // フルスクリーン切り替え(ブラウザの仕様上、ユーザー操作がないと呼び出せないためボタン経由にしている)。
     // ベンダープレフィックス付きAPI(Safari等)にも対応。
     // 対象は#unity-containerではなくページ全体(<html>)にしている: Fullscreen APIは指定した要素の子孫しか
     // 表示しないため、#unity-containerを対象にすると、document.body直下に追加されるGoogle連携ボタンの
     // オーバーレイ(GoogleSignIn.jslib参照)やこのフルスクリーンボタン自体がフルスクリーン中に見えなくなる。
-    // document.documentElementを対象にすればbody配下も表示対象に含まれるので、この問題が起きない
-    // (回転処理は#app-rootだけにかかる独立した仕組みなので、対象をhtmlに変えても影響はない)。
+    // document.documentElementを対象にすればbody配下も表示対象に含まれるので、この問題が起きない。
     var fullscreenTarget = document.documentElement;
     var fullscreenButton = document.getElementById("fullscreen-button");
 
@@ -264,8 +194,8 @@
             exitFullscreen();
           } else {
             var result = requestFullscreen(fullscreenTarget);
-            // 対応環境(主にAndroid Chrome)ではフルスクリーン化と同時にOS側の回転ロックも試みる。
-            // 失敗/非対応でも.force-landscapeによるCSS回転が効くので無視してよい
+            // 対応環境(主にAndroid Chrome)ではフルスクリーン化と同時にOS側の回転ロックも試みる
+            // (スマホを縦持ちしていても、フルスクリーン中は横向きに固定される)。失敗/非対応でも無視してよい
             if (result && result.then) {
               result.then(function () {
                 if (screen.orientation && screen.orientation.lock) {
@@ -286,17 +216,17 @@
     }
 
     // ウィンドウモード限定の画面サイズ調整(50~150%)の実際の反映は、上のresizeCanvas()内で行っている
-    // (gameWindowScalePercentの値はここで更新し、handleViewportChange()で再計算させるだけ)。
+    // (gameWindowScalePercentの値はここで更新し、resizeCanvas()で再計算させるだけ)。
     // フルスクリーンの出入りでもキャンバスサイズを再計算し直す(scale=100%への切り替えを反映するため。
     // 多くのブラウザはフルスクリーン切替時にresizeイベントも発火するが、念のため明示的にも呼んでおく)
-    document.addEventListener("fullscreenchange", handleViewportChange);
-    document.addEventListener("webkitfullscreenchange", handleViewportChange);
-    document.addEventListener("msfullscreenchange", handleViewportChange);
+    document.addEventListener("fullscreenchange", resizeCanvas);
+    document.addEventListener("webkitfullscreenchange", resizeCanvas);
+    document.addEventListener("msfullscreenchange", resizeCanvas);
 
     // Unity(WindowScale.jslib)から呼ばれるエントリーポイント
     window.__duelvSetGameWindowScalePercent = function (percent) {
       gameWindowScalePercent = percent;
-      handleViewportChange();
+      resizeCanvas();
       // Unity側もcanvasのクリック/タップ座標をブラウザのresizeイベントを起点に内部キャッシュしている
       // ことがあるため、こちらから直接canvasサイズを変えた後は念のため合成のresizeイベントを投げて
       // Unity側にも再計算のきっかけを与えておく(ボタンの見た目と実際の当たり判定がズレる事故の予防)
@@ -316,7 +246,7 @@
 
     createUnityInstance(canvas, config).then((unityInstance) => {
       window.unityInstance = unityInstance;
-      handleViewportChange(); // 起動完了後、念のためもう一度サイズ/向きを確定させる(上のセルフヒール参照)
+      resizeCanvas(); // 起動完了後、念のためもう一度サイズを確定させる(上のセルフヒール参照)
     });
   </script>
 </body>
