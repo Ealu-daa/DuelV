@@ -81,6 +81,7 @@
   <script src="Build/a.1.loader.js"></script>
   <script>
     var canvas = document.querySelector("#unity-canvas");
+    var unityContainer = document.getElementById("unity-container");
 
     // 常に16:9を維持し、ウィンドウ/画面がその比率でない場合は収まる最大サイズでレターボックス(上下 or 左右に黒帯)する。
     // #unity-containerがflexで中央揃えなので、キャンバスのCSSサイズをこの矩形に固定するだけで自動的に中央に収まる
@@ -129,10 +130,24 @@
     handleViewportChange();
     window.addEventListener("resize", handleViewportChange);
     window.addEventListener("orientationchange", handleViewportChange);
+    // モバイルブラウザはアドレスバーの表示/非表示などでビューポートの確定が初回描画に間に合わないことがあり、
+    // その場合resize/orientationchangeが発火しないまま「縦横判定はforce-landscapeなのに、実解像度の計算だけ
+    // 古い(縦の)ウィンドウサイズを元にしたまま」になってしまう不具合が実際にあった(CSSの回転自体は効いて
+    // いるのに、中身の描画だけ潰れて縦のまま見える)。次の数フレーム/数百ms以内に再計算して自己修復させておく
+    requestAnimationFrame(function () {
+      requestAnimationFrame(handleViewportChange);
+    });
+    setTimeout(handleViewportChange, 300);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", handleViewportChange);
 
     // フルスクリーン切り替え(ブラウザの仕様上、ユーザー操作がないと呼び出せないためボタン経由にしている)。
-    // ベンダープレフィックス付きAPI(Safari等)にも対応
-    var fullscreenTarget = document.getElementById("unity-container");
+    // ベンダープレフィックス付きAPI(Safari等)にも対応。
+    // 対象は#unity-containerではなくページ全体(<html>)にしている: Fullscreen APIは指定した要素の子孫しか
+    // 表示しないため、#unity-containerを対象にすると、document.body直下に追加されるGoogle連携ボタンの
+    // オーバーレイ(GoogleSignIn.jslib参照)やこのフルスクリーンボタン自体がフルスクリーン中に見えなくなる。
+    // document.documentElementを対象にすればbody配下も表示対象に含まれるので、この問題が起きない
+    // (回転処理は#app-rootだけにかかる独立した仕組みなので、対象をhtmlに変えても影響はない)。
+    var fullscreenTarget = document.documentElement;
     var fullscreenButton = document.getElementById("fullscreen-button");
 
     function isFullscreen() {
@@ -184,6 +199,31 @@
       }
     }
 
+    // ウィンドウモード限定の画面サイズ調整(50~150%、デフォルト100%、ピボットは中心)。
+    // 設定画面のスライダーからUnity側(WindowScaleSettings.cs → WindowScale.jslib)経由で
+    // window.__duelvSetGameWindowScalePercentが呼ばれ、ここで実際にCSSのtransform:scaleとして適用する。
+    // フルスクリーンは画面いっぱいに表示する機能で、この設定と組み合わせる意味がないため、
+    // フルスクリーン中は常に100%(等倍)として扱い、ウィンドウモードに戻ったら元の設定値を再適用する。
+    // #fullscreen-buttonまで縮小/拡大されるとタップしづらくなるので、対象は#unity-containerだけにする
+    // (transform-origin:center centerなので、常に画面中央を基準に拡大縮小される)。
+    var gameWindowScalePercent = 100;
+    unityContainer.style.transformOrigin = "center center";
+
+    function applyGameWindowScale() {
+      var percent = isFullscreen() ? 100 : gameWindowScalePercent;
+      unityContainer.style.transform = percent === 100 ? "" : "scale(" + (percent / 100) + ")";
+    }
+
+    document.addEventListener("fullscreenchange", applyGameWindowScale);
+    document.addEventListener("webkitfullscreenchange", applyGameWindowScale);
+    document.addEventListener("msfullscreenchange", applyGameWindowScale);
+
+    // Unity(WindowScale.jslib)から呼ばれるエントリーポイント
+    window.__duelvSetGameWindowScalePercent = function (percent) {
+      gameWindowScalePercent = percent;
+      applyGameWindowScale();
+    };
+
     var buildUrl = "Build";
     var config = {
       dataUrl: buildUrl + "/a.1.data.unityweb",
@@ -197,6 +237,7 @@
 
     createUnityInstance(canvas, config).then((unityInstance) => {
       window.unityInstance = unityInstance;
+      handleViewportChange(); // 起動完了後、念のためもう一度サイズ/向きを確定させる(上のセルフヒール参照)
     });
   </script>
 </body>
