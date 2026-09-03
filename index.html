@@ -50,9 +50,9 @@
       height: 100%;
       display: block;
     }
-    #fullscreen-button {
+    #fullscreen-button,
+    #rotate-button {
       position: fixed;
-      right: 12px;
       bottom: 12px;
       width: 40px;
       height: 40px;
@@ -69,6 +69,13 @@
       /* スマホでタップ時にハイライト色が付くのを防ぐ */
       -webkit-tap-highlight-color: transparent;
     }
+    #fullscreen-button { right: 12px; }
+    #rotate-button { right: 60px; }
+    /* 手動で回転をONにしている間、押しっぱなし感を出す */
+    #rotate-button.active {
+      background: rgba(255, 255, 255, 0.85);
+      color: #000;
+    }
   </style>
 </head>
 <body>
@@ -77,6 +84,7 @@
       <canvas id="unity-canvas"></canvas>
     </div>
     <button id="fullscreen-button" type="button" aria-label="フルスクリーン切り替え">⛶</button>
+    <button id="rotate-button" type="button" aria-label="回転切り替え">↻</button>
   </div>
   <script src="Build/a.1.loader.js"></script>
   <script>
@@ -98,13 +106,29 @@
     }
 
     var appRoot = document.getElementById("app-root");
+    var rotateButton = document.getElementById("rotate-button");
+
+    // 回転ボタンで手動固定した状態(null=自動判定に従う、true/false=ユーザーが手動でON/OFF固定した)。
+    // 自動判定(isTouchDevice() && 縦長)だけだと、判定に引っかからない環境(例: タッチ対応と判定されない
+    // デスクトップ)で回転を試したい場合や、逆に自動でONになった回転を一時的に解除したい場合に対応できない
+    // ため、フルスクリーンボタンと同様に手動トグルできるボタンを用意している
+    var manualRotationOverride = null;
 
     // スマホ(タッチデバイス)を縦持ちしている間だけ、#app-rootに.force-landscapeを付けてCSSで90度回転させる
     // (bodyそのものは回転させない。理由は#app-root.force-landscapeのコメント参照)。
     // OSの画面回転ロックがかかっていても効く(ネイティブのScreen Orientation APIに頼らないため)
     function updateForceLandscape() {
-      var shouldRotate = isTouchDevice() && window.innerHeight > window.innerWidth;
+      var autoShouldRotate = isTouchDevice() && window.innerHeight > window.innerWidth;
+      var shouldRotate = manualRotationOverride !== null ? manualRotationOverride : autoShouldRotate;
       appRoot.classList.toggle("force-landscape", shouldRotate);
+      if (rotateButton) rotateButton.classList.toggle("active", shouldRotate);
+    }
+
+    if (rotateButton) {
+      rotateButton.addEventListener("click", function () {
+        manualRotationOverride = !appRoot.classList.contains("force-landscape");
+        handleViewportChange();
+      });
     }
 
     function resizeCanvas() {
