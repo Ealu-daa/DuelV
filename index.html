@@ -12,6 +12,18 @@
   <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 
   <style>
+    /* ロード画面の見出し(#loading-title)用フォント。Google Fontsからの外部読み込みではなく、
+       ゲーム本体のTMPでも使っているのと同じttf(Assets/Games/Fonts/DotGothic16-Regular.ttf)を
+       このテンプレート配下(Fonts/)にコピーして自前でホストしている
+       (Unityがビルド時にWebGLTemplateフォルダの中身をまるごとBuild出力にコピーしてくれるため、
+       このFonts/フォルダも自動的にビルドへ含まれる) */
+    @font-face {
+      font-family: 'DotGothic16';
+      src: url('Fonts/DotGothic16-Regular.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+      font-display: swap;
+    }
     html, body {
       margin: 0;
       padding: 0;
@@ -23,6 +35,43 @@
     #app-root {
       width: 100%;
       height: 100%;
+      position: relative; /* #loading-overlayをこの中に絶対配置で重ねるための基準 */
+    }
+    /* ダウンロード中(createUnityInstanceのprogressコールバックが進む間)だけ出す独自のロード画面。
+       Unity自身の「Made with Unity」スプラッシュはWASM初期化後にcanvas内で表示されるものなので、
+       それより手前の「まだ何も表示できない」区間をここでカバーする */
+    #loading-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+      transition: opacity 0.4s ease;
+    }
+    #loading-title {
+      color: #fff;
+      font-size: 22px;
+      letter-spacing: 4px;
+      margin-bottom: 20px;
+      font-family: 'DotGothic16', sans-serif; /* 読み込み失敗時はsans-serifにフォールバック */
+    }
+    #loading-bar-bg {
+      width: 60%;
+      max-width: 360px;
+      height: 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.15);
+      overflow: hidden;
+    }
+    #loading-bar-fill {
+      width: 0%;
+      height: 100%;
+      border-radius: 4px;
+      background: #fff;
+      transition: width 0.2s ease-out;
     }
     #unity-container {
       width: 100%;
@@ -59,12 +108,16 @@
 </head>
 <body>
   <div id="app-root">
+    <div id="loading-overlay">
+      <div id="loading-title">Loading</div>
+      <div id="loading-bar-bg"><div id="loading-bar-fill"></div></div>
+    </div>
     <div id="unity-container">
       <canvas id="unity-canvas"></canvas>
     </div>
     <button id="fullscreen-button" type="button" aria-label="フルスクリーン切り替え">⛶</button>
   </div>
-  <script src="Build/a.1.loader.js"></script>
+  <script src="Build/a.loader.js"></script>
   <script>
     var canvas = document.querySelector("#unity-canvas");
     var unityContainer = document.getElementById("unity-container");
@@ -235,18 +288,32 @@
 
     var buildUrl = "Build";
     var config = {
-      dataUrl: buildUrl + "/a.1.data.unityweb",
-      frameworkUrl: buildUrl + "/a.1.framework.js.unityweb",
-      codeUrl: buildUrl + "/a.1.wasm.unityweb",
+      dataUrl: buildUrl + "/a.data.unityweb",
+      frameworkUrl: buildUrl + "/a.framework.js.unityweb",
+      codeUrl: buildUrl + "/a.wasm.unityweb",
       streamingAssetsUrl: "StreamingAssets",
-      companyName: "DefaultCompany",
+      companyName: "DELTA",
       productName: "DuelV",
-      productVersion: "a.1",
+      productVersion: "a.2",
     };
 
-    createUnityInstance(canvas, config).then((unityInstance) => {
+    // ダウンロード中の進捗(0〜1)をバーに反映し、起動完了したらフェードアウトさせて消す
+    var loadingOverlay = document.getElementById("loading-overlay");
+    var loadingBarFill = document.getElementById("loading-bar-fill");
+
+    createUnityInstance(canvas, config, function (progress) {
+      if (loadingBarFill) loadingBarFill.style.width = (progress * 100) + "%";
+    }).then((unityInstance) => {
       window.unityInstance = unityInstance;
       resizeCanvas(); // 起動完了後、念のためもう一度サイズを確定させる(上のセルフヒール参照)
+
+      if (loadingOverlay) {
+        loadingOverlay.style.opacity = "0";
+        // transition(0.4s)が終わってから完全に取り除く(opacity:0のままだと当たり判定だけ残ってしまうため)
+        setTimeout(function () {
+          if (loadingOverlay && loadingOverlay.parentNode) loadingOverlay.parentNode.removeChild(loadingOverlay);
+        }, 400);
+      }
     });
   </script>
 </body>
