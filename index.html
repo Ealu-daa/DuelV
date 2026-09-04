@@ -120,13 +120,6 @@
   <script src="Build/a.loader.js"></script>
   <script>
     var canvas = document.querySelector("#unity-canvas");
-    var unityContainer = document.getElementById("unity-container");
-
-    // ウィンドウモード限定の画面サイズ調整(50~150%、デフォルト100%)。設定画面のスライダーから
-    // window.__duelvSetGameWindowScalePercent(下の方で定義)経由で更新される。
-    // resizeCanvas()が最初に呼ばれるより前にここで初期化しておくこと(varは巻き上げられても代入は
-    // されないので、ここで初期化しないと初回のresizeCanvas()でNaNになってしまう)
-    var gameWindowScalePercent = 100;
 
     // 常に16:9を維持し、ウィンドウ/画面がその比率でない場合は収まる最大サイズでレターボックス(上下 or 左右に黒帯)する。
     // #unity-containerがflexで中央揃えなので、キャンバスのCSSサイズをこの矩形に固定するだけで自動的に中央に収まる
@@ -157,45 +150,12 @@
         w = h * TARGET_ASPECT;
       }
 
-      // ウィンドウモード限定の画面サイズ調整(50~150%、ピボットは中心)。フルスクリーン中は常に100%扱いにする
-      // (フルスクリーンは画面いっぱいに表示する機能なので、この設定と組み合わせる意味がないため)。
-      // transform:scale()による見た目だけの拡大ではなく、ここでキャンバス自体の実サイズを増減させている
-      var scale = isFullscreen() ? 1 : gameWindowScalePercent / 100;
-      var scaledW = w * scale;
-      var scaledH = h * scale;
-
-      // 100%より拡大すると#unity-container(flexで中央揃え)からはみ出す分を計算し、同じ量だけ
-      // #unity-container自身にpaddingとして持たせる。
-      // 理由: flexのjustify-content:centerで中央寄せしたままはみ出させると、CSSの仕様上
-      // 「中心から見て手前側(左/上)」のはみ出しはスクロールしても絶対に辿り着けない(scrollLeft/Topは
-      // 負の値にできないため)。paddingで同じ分の余白を外側に確保しておくと、はみ出し分がちょうど
-      // #unity-container自身の外接ボックスに収まる形になり、祖先(body)から見て「はみ出し」ではなく
-      // 通常の(スクロールで届く)サイズとして扱われるようになる
-      var overflowX = Math.max(0, scaledW - winW);
-      var overflowY = Math.max(0, scaledH - winH);
-      unityContainer.style.padding = (overflowY / 2) + "px " + (overflowX / 2) + "px";
-
-      // 実際にはみ出す場合だけスクロール可能にする(それ以外・フルスクリーン中は従来通りoverflow:hiddenのまま)。
-      // html側にもCSSで明示的にoverflow:hiddenを指定しているため、bodyだけでなくhtml(documentElement)
-      // 側も一緒に切り替えないとクリップされたまま実際にはみ出た部分が見えない(スクロールもできない)
-      var isOverflowing = overflowX > 0 || overflowY > 0;
-      var overflowValue = isOverflowing ? "auto" : "hidden";
-      document.documentElement.style.overflow = overflowValue;
-      document.body.style.overflow = overflowValue;
-
       // 実解像度(canvas.width/height)とCSS表示サイズ(canvas.style)を両方この矩形に合わせる
       // (表示サイズだけCSSで伸ばすとぼやけるため、実解像度側もdpr込みで明示的に指定する)
-      canvas.style.width = scaledW + "px";
-      canvas.style.height = scaledH + "px";
-      canvas.width = scaledW * dpr;
-      canvas.height = scaledH * dpr;
-
-      // はみ出している場合、デフォルトでは「はみ出し量の中心」がちょうど画面に収まる位置までスクロール
-      // させておく(でないと上のpaddingトリックにより初期スクロール位置(0,0)では左上に寄って見えてしまう)
-      if (isOverflowing) {
-        document.body.scrollLeft = overflowX / 2;
-        document.body.scrollTop = overflowY / 2;
-      }
+      canvas.style.width = w + "px";
+      canvas.style.height = h + "px";
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
     }
 
     // モバイルブラウザはアドレスバーの表示/非表示などでビューポートの確定が初回描画に間に合わないことがあり、
@@ -268,23 +228,11 @@
       }
     }
 
-    // ウィンドウモード限定の画面サイズ調整(50~150%)の実際の反映は、上のresizeCanvas()内で行っている
-    // (gameWindowScalePercentの値はここで更新し、resizeCanvas()で再計算させるだけ)。
-    // フルスクリーンの出入りでもキャンバスサイズを再計算し直す(scale=100%への切り替えを反映するため。
-    // 多くのブラウザはフルスクリーン切替時にresizeイベントも発火するが、念のため明示的にも呼んでおく)
+    // フルスクリーンの出入りでもキャンバスサイズを再計算し直す(多くのブラウザはフルスクリーン切替時に
+    // resizeイベントも発火するが、念のため明示的にも呼んでおく)
     document.addEventListener("fullscreenchange", resizeCanvas);
     document.addEventListener("webkitfullscreenchange", resizeCanvas);
     document.addEventListener("msfullscreenchange", resizeCanvas);
-
-    // Unity(WindowScale.jslib)から呼ばれるエントリーポイント
-    window.__duelvSetGameWindowScalePercent = function (percent) {
-      gameWindowScalePercent = percent;
-      resizeCanvas();
-      // Unity側もcanvasのクリック/タップ座標をブラウザのresizeイベントを起点に内部キャッシュしている
-      // ことがあるため、こちらから直接canvasサイズを変えた後は念のため合成のresizeイベントを投げて
-      // Unity側にも再計算のきっかけを与えておく(ボタンの見た目と実際の当たり判定がズレる事故の予防)
-      window.dispatchEvent(new Event("resize"));
-    };
 
     var buildUrl = "Build";
     var config = {
