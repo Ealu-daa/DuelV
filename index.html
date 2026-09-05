@@ -162,18 +162,32 @@
       canvas.width = w * dpr;
       canvas.height = h * dpr;
     }
+    // WebGLInput.jslib(スマホのテキスト入力用オーバーレイ)から、編集中かどうかに合わせて呼んでもらう。
+    // 詳しくは下のhandleViewportResizeのコメント参照
+    window.__duelvResizeCanvas = resizeCanvas;
 
     // モバイルブラウザはアドレスバーの表示/非表示などでビューポートの確定が初回描画に間に合わないことがあり、
     // その場合resize/orientationchangeが発火しないまま古いウィンドウサイズを元にした計算のままになって
     // しまう不具合が実際にあった。次の数フレーム/数百ms以内に再計算して自己修復させておく
     resizeCanvas();
-    window.addEventListener("resize", resizeCanvas);
-    window.addEventListener("orientationchange", resizeCanvas);
+
+    // ソフトウェアキーボードが開くと、モバイルブラウザは(特にvisualViewportの)高さが縮んだ通常の
+    // リサイズと区別せずresizeイベントを発火する。resizeCanvasはそれを「画面が小さくなった」と
+    // 解釈してcanvas自体を小さくレターボックスしてしまい、キーボード表示のたびにゲーム画面が
+    // 縮んで見える不具合になっていた(実際に報告あり)。WebGLInput.jslib側でテキスト編集中は
+    // window.__duelvTextInputActive=trueにしてもらい、その間はここでのcanvas再計算をスキップする
+    // (編集終了時はWebGLInput.jslib側からwindow.__duelvResizeCanvas()を直接呼んで即座に正しいサイズへ戻す)
+    function handleViewportResize() {
+      if (window.__duelvTextInputActive) return;
+      resizeCanvas();
+    }
+    window.addEventListener("resize", handleViewportResize);
+    window.addEventListener("orientationchange", handleViewportResize);
     requestAnimationFrame(function () {
       requestAnimationFrame(resizeCanvas);
     });
     setTimeout(resizeCanvas, 300);
-    if (window.visualViewport) window.visualViewport.addEventListener("resize", resizeCanvas);
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", handleViewportResize);
 
     // フルスクリーン切り替え(ブラウザの仕様上、ユーザー操作がないと呼び出せないためボタン経由にしている)。
     // ベンダープレフィックス付きAPI(Safari等)にも対応。
